@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Lite SSL Pinning Bypass Guide</title>
+    <style>
+        :root {
+            --primary: #3897f0;
+            --secondary: #f56040;
+            --dark: #262626;
+            --light: #fafafa;
+            --success: #4CAF50;
+            --warning: #FFC107;
+            --danger: #F44336;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: var(--light);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h1, h2, h3 {
+            color: var(--primary);
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        
+        h2 {
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+        
+        pre {
+            background-color: #f5f5f5;
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            border-left: 4px solid var(--primary);
+        }
+        
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f5f5f5;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9rem;
+        }
+        
+        .note {
+            background-color: #e7f5ff;
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .warning {
+            background-color: #fff8e1;
+            border-left: 4px solid var(--warning);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .success {
+            background-color: #e8f5e9;
+            border-left: 4px solid var(--success);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .danger {
+            background-color: #ffebee;
+            border-left: 4px solid var(--danger);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .step {
+            counter-increment: step-counter;
+            margin-bottom: 1.5rem;
+        }
+        
+        .step h3::before {
+            content: counter(step-counter) ". ";
+            color: var(--primary);
+            font-weight: bold;
+        }
+        
+        .file-structure {
+            background-color: #f0f0f0;
+            padding: 1rem;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Instagram Lite SSL Pinning Bypass Guide</h1>
+        <p>Complete walkthrough for patching Instagram Lite APK on Ubuntu</p>
+    </header>
+    
+    <div class="container">
+        <h2>Prerequisites</h2>
+        
+        <div class="step">
+            <h3>Install Required Tools</h3>
+            <pre><code>sudo apt update
+sudo apt install -y apktool openjdk-17-jdk wget unzip
+pip3 install frida-tools objection</code></pre>
+            
+            <div class="note">
+                <strong>Note:</strong> If you get package not found errors, try adding the OpenJDK PPA:
+                <pre><code>sudo add-apt-repository ppa:openjdk-r/ppa
+sudo apt update</code></pre>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Step 1: Decompile the APK</h2>
+        
+        <div class="step">
+            <h3>Decompile Instagram Lite</h3>
+            <pre><code>apktool d com.instagram.lite.apk -o instagram_lite</code></pre>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Step 2: Modify AndroidManifest.xml</h2>
+        
+        <div class="step">
+            <h3>Remove Problematic Attribute</h3>
+            <p>Edit the manifest file to remove the unsupported attribute:</p>
+            <pre><code>sed -i 's/ android:allowCrossUidActivitySwitchFromBelow="false"//g' instagram_lite/AndroidManifest.xml</code></pre>
+            
+            <div class="warning">
+                <strong>Warning:</strong> Make sure you only remove the attribute, not the entire line or surrounding spaces.
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Step 3: Rebuild the APK</h2>
+        
+        <div class="step">
+            <h3>Rebuild with Modified Files</h3>
+            <pre><code>java -jar apktool.jar b instagram_lite -o instagram_lite_patched.apk</code></pre>
+            
+            <div class="note">
+                <strong>Tip:</strong> If rebuilding fails, check <code>instagram_lite/build/apktool.yml</code> for version compatibility issues.
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Step 4: Create Signing Keystore</h2>
+        
+        <div class="step">
+            <h3>Generate New Keystore</h3>
+            <pre><code>keytool -genkey -v -keystore mykey.keystore -alias myalias \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -storepass android -keypass android \
+  -dname "CN=Test, OU=Test, O=Test, L=Test, S=Test, C=US"</code></pre>
+            
+            <div class="note">
+                <strong>Default Credentials:</strong> Using <code>android</code> for both store and key passwords for testing.
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Step 5: Sign the APK</h2>
+        
+        <div class="step">
+            <h3>Sign with Jarsigner</h3>
+            <pre><code>jarsigner -verbose \
+  -sigalg SHA1withRSA \
+  -digestalg SHA1 \
+  -keystore mykey.keystore \
+  -storepass android \
+  -keypass android \
+  instagram_lite_patched.apk \
+  myalias</code></pre>
+            
+            <div class="warning">
+                <strong>Troubleshooting:</strong> If you get "keystore password was incorrect", ensure you're using the same password used during keystore creation.
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Alternative: Use Zipalign and Apksigner</h3>
+            <pre><code>zipalign -v 4 instagram_lite_patched.apk instagram_lite_aligned.apk
+
+apksigner sign \
+  --ks mykey.keystore \
+  --ks-pass pass:android \
+  --key-pass pass:android \
+  --out instagram_lite_signed.apk \
+  instagram_lite_aligned.apk</code></pre>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Step 6: Verify the Signed APK</h2>
+        
+        <div class="step">
+            <h3>Check Signature</h3>
+            <pre><code>apksigner verify --verbose instagram_lite_signed.apk</code></pre>
+            
+            <div class="success">
+                <strong>Success:</strong> You should see "Verified successfully" if everything worked correctly.
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Final File Structure</h2>
+        
+        <div class="file-structure">
+/home/student-01-de579e7279db/
+├── apktool.jar
+├── com.instagram.lite.apk
+├── instagram_lite/
+├── instagram_lite_patched.apk
+├── instagram_lite_aligned.apk
+├── instagram_lite_signed.apk
+├── instagram_lite_signed.apk.idsig
+├── mykey.keystore
+└── openjdk-17.0.2_linux-x64_bin.tar.gz
+        </div>
+        
+        <div class="note">
+            <strong>Note:</strong> The <code>.idsig</code> file is a temporary signature file and can be deleted.
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Next Steps</h2>
+        
+        <ul>
+            <li>Install the signed APK on your test device</li>
+            <li>Use Frida scripts to verify SSL pinning is disabled</li>
+            <li>Inspect traffic with Burp Suite or Charles Proxy</li>
+        </ul>
+        
+        <div class="danger">
+            <strong>Legal Notice:</strong> Only perform this on apps you own or have permission to test. Unauthorized modification may violate terms of service.
+        </div>
+    </div>
+</body>
+</html>
